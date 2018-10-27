@@ -27,6 +27,8 @@ module.exports.routes = {
   '/': {
     view: 'pages/homepage'
   },
+  '/graph': {view: 'pages/graph'},
+  'GET /graph/api': 'APIController.getData',
 
   /***************************************************************************
   *                                                                          *
