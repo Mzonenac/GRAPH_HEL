@@ -1,10 +1,9 @@
-const chartColors = ['rgb(255, 205, 86)','rgb(54, 162, 235)','rgb(255, 0, 0)','rgba(255, 205, 87, 0.5)','rgba(54, 162, 236,0.5)'];
-const graphService = require('./microservice');
+const graphService = require('./service');
 
+exports.handler = (event, context, Res, callback) => {
 
-exports.handler = (event, context, callback) => {
-
-  const content = event.body;
+  const content = event.body,
+  chartColors = ['rgb(255, 205, 86)','rgb(54, 162, 235)','rgb(255, 0, 0)','rgba(255, 205, 87, 0.5)','rgba(54, 162, 236,0.5)'];
 
 	function getTypeOfGraph(datasets) {
 	  if(!datasets) datasets = [];
@@ -14,13 +13,9 @@ exports.handler = (event, context, callback) => {
       return (eValue.length <= datasets.length * 0.25) ? 'bar': 'line';
     }
 
-
-
-  let	promises = [],
-  		responseBody = {};
-
-	for (let alertId in content) {
 		let series = [],
+		  alertId = Object.keys(content)[0],
+		  responseBody = {}
 			timespan = [],
 			justOnce = true,
 			payload = content[alertId],
@@ -40,7 +35,6 @@ exports.handler = (event, context, callback) => {
 	            }
 
 	            thresholdSize = values.length;
-
 	            let seriesName = key,
 	            	color = chartColors[0],
 	            	backgroundColor = chartColors[3];
@@ -55,7 +49,6 @@ exports.handler = (event, context, callback) => {
 	            	color = chartColors[0];
 	            	backgroundColor = chartColors[3];
 	            }
-
 	            series.push({
 	                    label: seriesName,
 	                    fill: true,
@@ -90,37 +83,39 @@ exports.handler = (event, context, callback) => {
 	    let annotationIndex = timespan.findIndex(function(element){ return element == payload.detectionTime});
 	    annotationPosition['peakPoint'] = annotationIndex === -1 ? 0: annotationIndex;
 	    annotationPosition['dataset'] = series.findIndex(function(element){ return element.label == 'Events/Minute'})
-
    		//timespan is in seconds
 	    timespan = timespan.map(x => parseInt(x) * 1000);
 
-		function createPromise(xAxis, data, position, Id) {
-			return new Promise(function (resolve, reject) {
-				graphService(xAxis, data, position, (res, err) => {
-					if (res !== null) {
-						resolve({
-							url: res,
-							alertId: Id
-						});
-					} else {
-						reject('Could not generate graph');
-					}
-				});
-			});
-		}
-		//create promisse array of graph
-		let promise = createPromise(timespan, series, annotationPosition, alertId)
-		promises.push(promise);
-	}
+      function createPromise(xAxis, data, position, Id, Res) {
+        return new Promise(function (resolve, reject) {
+          graphService(xAxis, data, position, Res, (res, err) => {
+            if (!err) {
+              resolve({
+                url: res,
+                alertId: Id,
+              });
+            } else {
+              reject({
+               alertId: Id,
+               error: JSON.stringify(err)
+               });
+            }
+          });
+        });
+      }
+      //create promisse array of graph
 
-	Promise
-	.all(promises)
-	.then(resp => {
-		resp.forEach(result => { responseBody[result.alertId]=result.url; responseBody.url = result.url; })
-		callback (null, responseBody);
-	})
-	.catch (reason => {
-	  console.info(reason)
-		callback (reason)
-	});
+      createPromise(timespan, series, annotationPosition, alertId, Res)
+      .then(result => {
+        responseBody[result.alertId]=result.url;
+        responseBody.url = result.url;
+        responseBody.error = result.error
+        callback(result);
+      })
+      .catch (reason => {
+        callback({
+            alertId: alertId,
+            error: reason
+        });
+      });
 }
