@@ -1,6 +1,6 @@
 const graphService = require('./service');
 
-exports.handler = (event, context, Res, callback) => {
+exports.handler = (event, context, Res, flag, callback) => {
 
   const content = event.body,
   chartColors = ['rgb(255, 205, 86)','rgb(54, 162, 235)','rgb(255, 0, 0)','rgba(255, 205, 87, 0.5)','rgba(54, 162, 236,0.5)'];
@@ -86,9 +86,9 @@ exports.handler = (event, context, Res, callback) => {
    		//timespan is in seconds
 	    timespan = timespan.map(x => parseInt(x) * 1000);
 
-      function createPromise(xAxis, data, position, Id, Res) {
+      function createPromise(xAxis, data, position, Id, Res, flag) {
         return new Promise(function (resolve, reject) {
-          graphService(xAxis, data, position, Res, (res, err) => {
+          graphService(xAxis, data, position, Res, flag, (res, err) => {
             if (!err) {
               resolve({
                 url: res,
@@ -105,7 +105,7 @@ exports.handler = (event, context, Res, callback) => {
       }
       //create promisse array of graph
 
-      createPromise(timespan, series, annotationPosition, alertId, Res)
+      createPromise(timespan, series, annotationPosition, alertId, Res, flag)
       .then(result => {
         responseBody[result.alertId]=result.url;
         responseBody.url = result.url;

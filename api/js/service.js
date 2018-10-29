@@ -68,7 +68,7 @@ const
             }]
         }
     }
-    let createGraph = async function(timespan, series, annotationPosition, Res, callbackHandler) {
+    let createGraph = async function(timespan, series, annotationPosition, Res, flag, callbackHandler) {
         let activeLength;
         let position;
         let chartJsOptions = {
@@ -113,7 +113,7 @@ const
               position = chart.chart.getDatasetMeta(annotationPosition.dataset).data[annotationPosition.peakPoint]._model.x;
                // get image as png buffer
               chartNode.writeImageToFile(type, image)
-              .then(() => watermark(image, position))
+              .then(() => ( flag ? watermark(image, position) : {url: image, error: null} ))
               .then ((response) => {
                 if (!response) return callbackHandler(null, 'error');
                 let res = publish(response.url, Res);
