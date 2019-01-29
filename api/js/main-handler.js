@@ -1,17 +1,15 @@
-const graphService = require('./service');
+const graphService = require('./graph-service');
 
-exports.handler = (event, context, Res, flag, callback) => {
+exports.handler = (event, context, Res, callback) => {
 
   const content = event.body,
   chartColors = ['rgb(255, 205, 86)','rgb(54, 162, 235)','rgb(255, 0, 0)','rgba(255, 205, 87, 0.5)','rgba(54, 162, 236,0.5)'];
 
 	function getTypeOfGraph(datasets) {
 	  if(!datasets) datasets = [];
-      let eValue = datasets.filter( function(el){
-        return el
-      });
-      return (eValue.length <= datasets.length * 0.25) ? 'bar': 'line';
-    }
+      const emptyValue = datasets.filter( e => !e)
+      return ( (datasets.length - emptyValue.length) <= datasets.length * 0.25) ? 'bar': 'line';
+  }
 
 		let series = [],
 		  alertId = Object.keys(content)[0],
@@ -20,7 +18,8 @@ exports.handler = (event, context, Res, flag, callback) => {
 			justOnce = true,
 			payload = content[alertId],
 			in_series = payload.series,
-			thresholdSize = 0;
+			thresholdSize = 0,
+			publishMode = true;  //true if it is testing mode not used the AWS
 
 	    for (let key in in_series){
 	        if (in_series.hasOwnProperty(key)){
@@ -86,9 +85,9 @@ exports.handler = (event, context, Res, flag, callback) => {
    		//timespan is in seconds
 	    timespan = timespan.map(x => parseInt(x) * 1000);
 
-      function createPromise(xAxis, data, position, Id, Res, flag) {
+      function createPromise(xAxis, data, position, Id, Res, publishMode) {
         return new Promise(function (resolve, reject) {
-          graphService(xAxis, data, position, Res, flag, (res, err) => {
+          graphService(xAxis, data, position, Res, publishMode, (res, err) => {
             if (!err) {
               resolve({
                 url: res,
@@ -105,7 +104,7 @@ exports.handler = (event, context, Res, flag, callback) => {
       }
       //create promisse array of graph
 
-      createPromise(timespan, series, annotationPosition, alertId, Res, flag)
+      createPromise(timespan, series, annotationPosition, alertId, Res, publishMode)
       .then(result => {
         responseBody[result.alertId]=result.url;
         responseBody.url = result.url;

@@ -1,10 +1,8 @@
 const
     ChartjsNode = require('chartjs-node'),
-    watermark = require('../js/watermark'),
-    execute = require('../js/execute'),
+    publishService = require('./publish-service'),
     type = 'image/png',
     image = 'image.png';
-
 
     let myChartOptions = {
         legend: {
@@ -68,10 +66,8 @@ const
             }]
         }
     }
-    let createGraph = async function(timespan, series, annotationPosition, Res, flag, callbackHandler) {
-        let activeLength;
-        let position;
-        let chartJsOptions = {
+    const graphService = async function(timespan, series, annotationPosition, Res, publishMode, callbackHandler) {
+        const chartJsOptions = {
               data:{
                   labels : timespan,
                   datasets: series,
@@ -105,18 +101,16 @@ const
                   }
               }
           }
-        let chartNode = new ChartjsNode(400, 250);
+        const chartNode = new ChartjsNode(400, 250);
         return await chartNode.drawChart(chartJsOptions)
             .then((chart) => {
               console.log('Chart is created successfully')
-              // set x position of watermark image
-              position = chart.chart.getDatasetMeta(annotationPosition.dataset).data[annotationPosition.peakPoint]._model.x;
                // get image as png buffer
               chartNode.writeImageToFile(type, image)
-              .then(() => ( flag ? watermark(image, position) : {url: image, error: null} ))
+              .then(() => ( {url: image, error: null} ))
               .then ((response) => {
                 if (!response) return callbackHandler(null, 'error');
-                let res = publish(response.url, Res);
+                const res = publishService ( response.url, Res, publishMode );
                 if (!res) return callbackHandler(null, 'error');
                 return callbackHandler(res.url, res.error);
               })
@@ -125,9 +119,7 @@ const
               return callbackHandler(null, e);
             })
     }
-    function publish(url, Res) {
-       return execute(url, Res, true); //true is testing mode not used the AWS
-    }
 
-    module.exports = createGraph;
+
+    module.exports = graphService;
 

@@ -1,17 +1,13 @@
-module.exports = {
-  getData: function(req, res) {
-      const body = require('../js/data-json'),
-            handler = require('../js/main-handler');
+const
+      body = require('../api/data-json'),
+      handler = require('../api/handler');
       let event = {
             body: body
       },
-      Res = res;
-      handler.handler(event, null, Res, (res) => {
+      ghost = false; // ghost image adding if it's true
+      handler.handler(event, null, ghost, (res) => {
           if (res.error) {
               throw 'Failed! alertId- ' + res.alertId + ' reason: ' + JSON.stringify(res.error);
           }
           console.log('Success: ' + JSON.stringify(res));
       });
-  }
-
-}
