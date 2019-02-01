@@ -1,15 +1,22 @@
 const graphService = require('./graph-service');
+publishService = require('./publish-service');
 
-exports.handler = (event, context, Res, callback) => {
+exports.handler = (event, context, Res, callbackHandler) => {
 
   const content = event.body,
-  chartColors = ['rgb(255, 205, 86)','rgb(54, 162, 235)','rgb(255, 0, 0)','rgba(255, 205, 87, 0.5)','rgba(54, 162, 236,0.5)'];
+  chartColors = ['rgb(255, 205, 86)','rgb(54, 162, 235)','rgb(255, 0, 0)','rgba(255, 205, 87, 0.5)','rgba(54, 162, 236,0.5)'],
+      type = 'image/png',
+      image = 'image.png';
 
 	function getTypeOfGraph(datasets) {
 	  if(!datasets) datasets = [];
       const emptyValue = datasets.filter( e => !e)
       return ( (datasets.length - emptyValue.length) <= datasets.length * 0.25) ? 'bar': 'line';
   }
+
+  	process.env['PATH'] = process.env['PATH'] + ':' + process.env['LAMBDA_TASK_ROOT'] + '/lib';
+  	process.env['LD_LIBRARY_PATH'] = process.env['LAMBDA_TASK_ROOT'] + '/lib';
+  	process.env['PKG_CONFIG_PATH'] = process.env['LAMBDA_TASK_ROOT'] + '/lib';
 
 		let series = [],
 		  alertId = Object.keys(content)[0],
@@ -19,7 +26,7 @@ exports.handler = (event, context, Res, callback) => {
 			payload = content[alertId],
 			in_series = payload.series,
 			thresholdSize = 0,
-			publishMode = true;  //true if it is testing mode not used the AWS
+			publishMode = false;  //true if it is testing mode not used the AWS
 
 	    for (let key in in_series){
 	        if (in_series.hasOwnProperty(key)){
@@ -85,36 +92,32 @@ exports.handler = (event, context, Res, callback) => {
    		//timespan is in seconds
 	    timespan = timespan.map(x => parseInt(x) * 1000);
 
-      function createPromise(xAxis, data, position, Id, Res, publishMode) {
-        return new Promise(function (resolve, reject) {
-          graphService(xAxis, data, position, Res, publishMode, (res, err) => {
-            if (!err) {
-              resolve({
-                url: res,
-                alertId: Id,
-              });
-            } else {
-              reject({
-               alertId: Id,
-               error: JSON.stringify(err)
-               });
-            }
-          });
-        });
-      }
-      //create promisse array of graph
-
-      createPromise(timespan, series, annotationPosition, alertId, Res, publishMode)
-      .then(result => {
-        responseBody[result.alertId]=result.url;
-        responseBody.url = result.url;
-        responseBody.error = result.error
-        callback(result);
+     graphService(timespan, series, annotationPosition, publishMode)
+      .then((response) => {
+        console.log('Chart is created successfully')
+//         get image as png buffer
+        writePublish(response.node)
       })
-      .catch (reason => {
-        callback({
-            alertId: alertId,
-            error: reason
-        });
-      });
+      .catch((e) => callbackHandler( {error: e, alertId: alertId}))
+
+
+     function writePublish(node) {
+       node.writeImageToFile(type, image)
+       .then(() => {
+          publishService (image, Res, publishMode, (result) => {
+             responseBody[alertId]=result.url;
+          	 const resp = {
+          	    "statusCode": 200,
+          	    "headers": {
+                "Content-Type": "application/json"
+     	        },
+       	        "body": JSON.stringify(responseBody),
+       	        "isBase64Encoded": false
+          	  };
+            callbackHandler(resp);
+          })
+       })
+       .catch((e) => (callbackHandler( {error: e, alertId: alertId})))
+     }
+
 }

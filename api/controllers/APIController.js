@@ -2,16 +2,23 @@ module.exports = {
   getData: function(req, res) {
       const body = require('../js/data-json'),
             handler = require('../js/main-handler');
-      let event = {
+      const event = {
             body: body
-      },
-      Res = res;
-      handler.handler(event, null, Res, (res) => {
-          if (res.error) {
-              throw 'Failed! alertId- ' + res.alertId + ' reason: ' + JSON.stringify(res.error);
+      };
+      const Res = res;
+      handler.handler(event, null, Res, response => {
+          if (response.error) {
+              throw 'Failed! alertId- ' + response.alertId + ' reason: ' + JSON.stringify(response.error);
+            }
+          else {
+              console.log('Success: ' + JSON.stringify(response));
           }
-          console.log('Success: ' + JSON.stringify(res));
-      });
+          return res.redirect('/graph' );
+
+      })
+
+
+
   }
 
 }

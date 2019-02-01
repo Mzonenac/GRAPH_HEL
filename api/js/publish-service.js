@@ -2,24 +2,28 @@
           createHash = require('hash-generator'),
           hashLength = 20,
           AWS = require('aws-sdk');
+          AWS.config.update({
+            accessKeyId: 'AKIAIIP4C3F3RC5NSELA',
+            secretAccessKey: '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'
+          });
 
-
-    const s3 = new AWS.S3();
-    const publishService = function (url, res, publishMode) {
-      if(!fs.existsSync(url)) { res.json({error : "File not Found"}); return }
-      let filestream = fs.createReadStream(url);
-      let filename = generateFileName();
+    const publishService = function (url, res, publishMode, publishResult) {
+      if(!fs.existsSync(url))
+        return {error : "File not Found"};
+      const filestream = fs.createReadStream(url);
+      const filename = generateFileName();
       if (publishMode) {
-        fileDownload(filestream, res, filename);
-        return {url: filename, error: null}
+        fileDownload(filestream, res, filename, publishResult);
       } else {
-        return uploadAWS(filestream, filename);
+        uploadAWS(filestream, filename, (result) => publishResult(result))
       }
     }
 
-    function fileDownload(filestream, res, filename) {
+    function fileDownload(filestream, res, filename, publishResult) {
       res.setHeader('Content-disposition', 'attachment; filename=' + filename);
-      filestream.pipe(res);
+      filestream.pipe(res)
+      .on('finish', (e) => publishResult({url: filename, error: null} ) )
+      .on('error', (e) => console.log('error', e))
     }
 
     function generateFileName() {
@@ -27,14 +31,17 @@
       return 'graph_image_' + hash + '.png';
     }
 
-    function uploadAWS (filestream, filename) {
-      let params = {Bucket: 'loom-images', Key: filename, Body: filestream, ContentType:'image/png'};
-      let s3 = new AWS.S3();
-      return {url: filename, error: null}
-      s3.upload(params, (err, data) => {
-         if (err) console.log(err);
-         let url = data.Location;
+    function uploadAWS (filestream, filename, callBack) {
+      const params = {Bucket: 'loom-public-open-for-upload', Key: filename, Body: filestream  , ContentType:'image/png'};
+      const s3 = new AWS.S3();
+      let url
+      s3.upload(params, (error, data) => {
+       if (error)
+        callBack({"error" : error})
+       else
+        callBack({url: data.Location, error: null})
       });
     }
+
 
     module.exports = publishService;

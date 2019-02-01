@@ -4,7 +4,7 @@ const
     type = 'image/png',
     image = 'image.png';
 
-    let myChartOptions = {
+    const myChartOptions = {
         legend: {
             labels: {
                 fontColor: "rgba(0, 0, 0, 1)",
@@ -20,7 +20,7 @@ const
             mode: 'index',
             intersect: false,
             bodyFontSize: 8,
-            titleMarginBottom:1,
+            titleMarginBottom:5,
             xPadding: 8,
             yPadding:10
         },
@@ -66,7 +66,7 @@ const
             }]
         }
     }
-    const graphService = async function(timespan, series, annotationPosition, Res, publishMode, callbackHandler) {
+    const graphService = async (timespan, series, annotationPosition, publishMode) => {
         const chartJsOptions = {
               data:{
                   labels : timespan,
@@ -102,23 +102,12 @@ const
               }
           }
         const chartNode = new ChartjsNode(400, 250);
-        return await chartNode.drawChart(chartJsOptions)
-            .then((chart) => {
-              console.log('Chart is created successfully')
-               // get image as png buffer
-              chartNode.writeImageToFile(type, image)
-              .then(() => ( {url: image, error: null} ))
-              .then ((response) => {
-                if (!response) return callbackHandler(null, 'error');
-                const res = publishService ( response.url, Res, publishMode );
-                if (!res) return callbackHandler(null, 'error');
-                return callbackHandler(res.url, res.error);
-              })
-            })
-            .catch((e) => {
-              return callbackHandler(null, e);
-            })
+        return  await chartNode.drawChart(chartJsOptions)
+                      .then(() => ({node: chartNode}))
+                      .catch((e) => ({error: "Graph is not create", reason: e}))
     }
+
+
 
 
     module.exports = graphService;
