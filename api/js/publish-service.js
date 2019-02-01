@@ -3,8 +3,7 @@
           hashLength = 20,
           AWS = require('aws-sdk');
           AWS.config.update({
-            accessKeyId: 'AKIAIIP4C3F3RC5NSELA',
-            secretAccessKey: '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'
+          
           });
 
     const publishService = function (url, res, publishMode, publishResult) {
